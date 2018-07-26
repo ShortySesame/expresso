@@ -195,23 +195,21 @@ function createComment (url,request) {
 const pp = x => JSON.stringify (x, null, 2);
 
 function updateComment(url, request) {
-
     const id = Number(url.split('/').filter(segment => segment)[1]);
-    const savedComment = database.comments[id].body;
-    const requestComment = request.body.comment.body;
+    const savedComment = database.comments[id];
+    const requestComment = requet.body && request.body.comment;
+    const response = {};
     console.log(`>>>>>>>>>>> updateComment: url is ${url}`);
     console.log(`>>>>>>>>>>> request.body is ${pp(request.body)}`);
     console.log(`>>>>>>>>>>> savedComment is ${pp(savedComment)}`);
     console.log(`>>>>>>>>>>> id is ${id}`);
     console.log(`>>>>>>>>>>> requestComment is ${pp(requestComment)}`);
-    const response = {};
-
-    if ((request.body===null) || !requestComment) {
+    if (!requestComment) {
         response.status = 400;
-    } else if (savedComment === null) {
+    } else if (!savedComment) {
         response.status = 404;
     } else {
-        database.comments.id.body = requestComment;
+        savedComment.body = requestComment.body || savedComment.body;
         response.status = 200;
     }
     return response;
@@ -240,24 +238,31 @@ function updateArticle(url, request) {
   return response;
 }
 
-function deleteComment(url, request){
-  const id = Number(url.split('/').filter(segment => segment)[1]);
-  const savedComment =database.comments[id];
-  const un = database.comments[id].username;
+function deleteComment(url, request) {
+    const id = Number(url.split('/').filter(segment => segment)[1]);
+    //gets the comment id
+    const artId = database.comments[id].articleId
+    //gets the article id from the comments id
+    const savedComment = database.comments[id];
+    //gets the saved comment object
+    const un = database.comments[id].username;
+    //gets the unsername
 
-  const response ={};
-if (savedComment){
-    response.status = 204;
-    savedComment=null;
-    const index = database.users[un].articleIds.indexof(id);
-    database.users[un].articleIds.splice(index,1);
+    const response = {};
+    if (!artId) {
+      //checks if there is an article id
+        response.status = 404;
+    } else {
+        const index = database.users[un].commentIds.indexof(id);
+        //gets the index of the article id (to remove below) in the articleID
+        //within the users object
+        database.users[un].articleIds.splice(index, 1);
+        //removes that comment id
+        savedComment=null;
+        //maybe this deletes the comment--I don't know where to begin here
+        response.status = 204;
     }
-else{
-    response.status = 404;
-
-}
-  return response;
-
+    return response;
 }
 
 function deleteArticle(url, request) {
