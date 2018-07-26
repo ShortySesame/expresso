@@ -192,29 +192,32 @@ function createComment (url,request) {
 }
 
 
-const pp = x => JSON.Stringify (x, null, 2);
+const pp = x => JSON.stringify (x, null, 2);
 
 function updateComment(url, request) {
-    console.log(`>>>>>>>>>>> updateComment: url is ${url}`);
-    console.log(`>>>>>>>>>>> request.body: url is ${request.body}`);
+
     const id = Number(url.split('/').filter(segment => segment)[1]);
-    const savedComment = database.comments[id];
-    const requestComment = request.comments && request.body.comment;
-    console.log(`>>>>>>>>>>> savedComment is ${savedComment}`);
+    const savedComment = database.comments[id].body;
+    const requestComment = request.body.comment.body;
+    console.log(`>>>>>>>>>>> updateComment: url is ${url}`);
+    console.log(`>>>>>>>>>>> request.body is ${pp(request.body)}`);
+    console.log(`>>>>>>>>>>> savedComment is ${pp(savedComment)}`);
     console.log(`>>>>>>>>>>> id is ${id}`);
-    console.log(`>>>>>>>>>>> requestComment is ${requestComment}`);
+    console.log(`>>>>>>>>>>> requestComment is ${pp(requestComment)}`);
     const response = {};
 
-    if (!id || !requestComment) {
+    if ((request.body===null) || !requestComment) {
         response.status = 400;
     } else if (savedComment === null) {
         response.status = 404;
     } else {
-        comment.body.id = requestComment;
+        database.comments.id.body = requestComment;
         response.status = 200;
     }
     return response;
 }
+
+
 
 function updateArticle(url, request) {
   const id = Number(url.split('/').filter(segment => segment)[1]);
