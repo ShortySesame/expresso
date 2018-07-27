@@ -47,7 +47,7 @@ const routes = {
 };
 
 
-function downvoteComment(url, request){};
+
 
 
 function getUser(url, request) {
@@ -299,7 +299,7 @@ function downvoteComment(url, request){
     response.status = 400;
   }
   else{
-    downvote(savedComment, username)
+    downvote(savedComment, username);
       response.status = 200;
   }
 return response;
@@ -314,6 +314,7 @@ function upvoteComment(url, request){
   }
   else{
     upvote(savedComment, username);
+      response.status = 200;
   }
 return response;
 };
