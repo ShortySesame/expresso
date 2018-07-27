@@ -38,19 +38,16 @@ const routes = {
 
   },
   '/comments/:id/upvote': {
-    'PUT': upvotedComment
+    'PUT': upvoteComment
   },
   '/comments/:id/downvote': {
-    'PUT': downvotedComment
+    'PUT': downvoteComment
   }
 
 };
 
-function upvotedComment(url, request){
-  const id = Number(url.split('/').filter(segment => segment)[1]);
 
-};
-function downvotedComment(url, request){};
+function downvoteComment(url, request){};
 
 
 function getUser(url, request) {
@@ -199,11 +196,6 @@ function updateComment(url, request) {
     const savedComment = database.comments[id];
     const requestComment = requet.body && request.body.comment;
     const response = {};
-    console.log(`>>>>>>>>>>> updateComment: url is ${url}`);
-    console.log(`>>>>>>>>>>> request.body is ${pp(request.body)}`);
-    console.log(`>>>>>>>>>>> savedComment is ${pp(savedComment)}`);
-    console.log(`>>>>>>>>>>> id is ${id}`);
-    console.log(`>>>>>>>>>>> requestComment is ${pp(requestComment)}`);
     if (!requestComment) {
         response.status = 400;
     } else if (!savedComment) {
@@ -240,26 +232,19 @@ function updateArticle(url, request) {
 
 function deleteComment(url, request) {
     const id = Number(url.split('/').filter(segment => segment)[1]);
-    //gets the comment id
-    const artId = database.comments[id].articleId
-    //gets the article id from the comments id
+    const artId = database.comments[id].articleId;
     const savedComment = database.comments[id];
-    //gets the saved comment object
+
     const un = database.comments[id].username;
-    //gets the unsername
+
 
     const response = {};
     if (!artId) {
-      //checks if there is an article id
         response.status = 404;
     } else {
-        const index = database.users[un].commentIds.indexof(id);
-        //gets the index of the article id (to remove below) in the articleID
-        //within the users object
+        const index = database.users[un].commentIds.indexOf(id);
         database.users[un].articleIds.splice(index, 1);
-        //removes that comment id
-        savedComment=null;
-        //maybe this deletes the comment--I don't know where to begin here
+        database.comments[id]=null;
         response.status = 204;
     }
     return response;
@@ -305,6 +290,34 @@ function upvoteArticle(url, request) {
 
   return response;
 }
+
+function downvoteComment(url, request){
+  const id = Number(url.split('/').filter(segment => segment)[1]);
+  const username = request.body && request.body.username;
+  const savedComment= request.body.id;
+  if (!id || !username || !savedComment){
+    response.status = 400;
+  }
+  else{
+    downvote(savedComment, username)
+      response.status = 200;
+  }
+return response;
+};
+
+function upvoteComment(url, request){
+  const id = Number(url.split('/').filter(segment => segment)[1]);
+  const username = request.body && request.body.username;
+  const savedComment= request.body.id;
+  if (!id || !username || !savedComment){
+    response.status = 400;
+  }
+  else{
+    upvote(savedComment, username);
+  }
+return response;
+};
+
 
 function downvoteArticle(url, request) {
   const id = Number(url.split('/').filter(segment => segment)[1]);
