@@ -236,26 +236,27 @@ function deleteComment(url, request) {
     const id = Number(url.split('/').filter(segment => segment)[1]);
     const savedComment = database.comments[id];
     const un = database.comments[id].username;
+  console.log(`>>>>>>>>>>> savedComment is  ${pp(savedComment)}`);
+  console.log(`>>>>>>>>>>> database.comments is  ${pp(database.comments)}`);
+    console.log(`>>>>>>>>>>> database.comments[id] is  ${pp(database.comments[id])}`);
+  console.log(`>>>>>>>>>>> un is  ${pp(un)}`);
     const response = {};
-    if (savedComment && id) {
+
+    if (savedComment) {
       // deletes comment id from users
         const index = database.users[un].commentIds.indexOf(id);
         database.users[un].commentIds.splice(index, 1);
 
-
-
         // deletes comment id from articles
           const artId = database.comments[id].articleId;
-          const Index2 =  database.articles[artId].commentIds.indexOf(id);
-          database.articles[artId].commentIds.splice(index, 1);
-
+          const index2 =  database.articles[artId].commentIds.indexOf(id);
+          database.articles[artId].commentIds.splice(index2, 1);
 
         //deletes the comment
         database.comments[id]=null;
 
         response.status = 204;
     } else {
-
           response.status = 404;
     }
   return response;
@@ -302,40 +303,40 @@ function upvoteArticle(url, request) {
   return response;
 }
 
-function downvoteComment(url, request){
-  const id = Number(url.split('/').filter(segment => segment)[1]);
-      console.log(`>>>>>id is ${pp(id)}`);
-      console.log(`>>>>> request.body is ${pp(request.body)}`);
-      console.log(`>>>>> request.body.username is ${pp( request.body.username)}`);
-  const un = request.body.username;
-    console.log(`>>>>>un is ${pp(un)}`);
-  const savedComment= request.body.id;
-  if (!id || !un || !savedComment){
-    response.status = 400;
-  }
-  else{
-    downvote(savedComment, username);
-      response.body = {comment: savedComment};
-      response.status = 200;
-  }
-return response;
-};
+
 
 function upvoteComment(url, request){
   const id = Number(url.split('/').filter(segment => segment)[1]);
-  const username = request.body && request.body.username;
-  const savedComment= request.body.id;
-  if (!id || !username || !savedComment){
+  const un = request.body && request.body.username;
+  const savedComment= database.comments[id];
+  const response = {};
+  if (!savedComment || !request.body || !database.users[un]){
     response.status = 400;
   }
   else{
-    upvote(savedComment, username);
+    upvote(savedComment, un);
     response.body = {comment: savedComment};
       response.status = 200;
   }
 return response;
+
 };
 
+function downvoteComment(url, request){
+  const id = Number(url.split('/').filter(segment => segment)[1]);
+  const un =  request.body && request.body.username;
+  let savedComment= database.comments[id];
+    const response = {};
+  if (!savedComment || !database.users[un] || !request.body){
+      response.status = 400;
+  }
+  else{
+    downvote(savedComment, un);
+      response.body = {comment: savedComment};
+        response.status = 200;
+  }
+return response;
+};
 
 function downvoteArticle(url, request) {
   const id = Number(url.split('/').filter(segment => segment)[1]);
@@ -350,7 +351,6 @@ function downvoteArticle(url, request) {
   } else {
     response.status = 400;
   }
-
   return response;
 }
 
