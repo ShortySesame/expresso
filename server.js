@@ -232,18 +232,19 @@ function updateArticle(url, request) {
 
 const pp = x => JSON.stringify (x, null, 2);
 
+
+
 function deleteComment(url, request) {
     const id = Number(url.split('/').filter(segment => segment)[1]);
     const savedComment = database.comments[id];
-    const un = database.comments[id].username;
-  console.log(`>>>>>>>>>>> savedComment is  ${pp(savedComment)}`);
-  console.log(`>>>>>>>>>>> database.comments is  ${pp(database.comments)}`);
-    console.log(`>>>>>>>>>>> database.comments[id] is  ${pp(database.comments[id])}`);
-  console.log(`>>>>>>>>>>> un is  ${pp(un)}`);
+
     const response = {};
 
-    if (savedComment) {
+
+
+    if (savedComment && id) {
       // deletes comment id from users
+        const un = database.comments[id].username;
         const index = database.users[un].commentIds.indexOf(id);
         database.users[un].commentIds.splice(index, 1);
 
@@ -261,6 +262,8 @@ function deleteComment(url, request) {
     }
   return response;
 }
+
+
 
 function deleteArticle(url, request) {
   const id = Number(url.split('/').filter(segment => segment)[1]);
