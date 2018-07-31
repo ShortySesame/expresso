@@ -1,467 +1,177 @@
-// database is let instead of const to allow us to modify it in test.js
-let database = {
-  users: {},
-  articles: {},
-  nextArticleId: 1,
-  comments: {},
-  nextCommentId: 1
-};
+const express = require ('express');
+const app = express();
+const bodyParser = require ('body-parser');
+const morgan = require ('morgan');
 
-const routes = {
-  '/users': {
-    'POST': getOrCreateUser
-  },
-  '/users/:username': {
-    'GET': getUser
-  },
-  '/articles': {
-    'GET': getArticles,
-    'POST': createArticle
-  },
-  '/articles/:id': {
-    'GET': getArticle,
-    'PUT': updateArticle,
-    'DELETE': deleteArticle
-  },
-  '/articles/:id/upvote': {
-    'PUT': upvoteArticle
-  },
-  '/articles/:id/downvote': {
-    'PUT': downvoteArticle
-  },
-  '/comments': {
-    'POST': createComment
-  },
-  '/comments/:id': {
-    'PUT': updateComment,
-    'DELETE': deleteComment
+const sqlite3 = require ('sqlite3');
+new sqlite3.Database(process.env.TEST_DATABASE || './db.sqlite');
 
-  },
-  '/comments/:id/upvote': {
-    'PUT': upvoteComment
-  },
-  '/comments/:id/downvote': {
-    'PUT': downvoteComment
+const PORT = process.env.PORT || 4001;
+const db = new sqlite3.Database(process.env.TEST_DATABASE || './db.sqlite');
+
+app.use(express.static('public'));
+app.use(morgan('dev'));
+app.use(bodyParser.json());
+
+ validateEmployee = (req, res, next) => {
+  const test = req.body.employee;
+  if (!test.name || !test.position || !test.wage) {
+    res.status(400).send();
   }
-
-};
-
-
-
-
-
-function getUser(url, request) {
-  const username = url.split('/').filter(segment => segment)[1];
-  const user = database.users[username];
-  const response = {};
-
-  if (user) {
-    const userArticles = user.articleIds.map(
-        articleId => database.articles[articleId]);
-    const userComments = user.commentIds.map(
-        commentId => database.comments[commentId]);
-    response.body = {
-      user: user,
-      userArticles: userArticles,
-      userComments: userComments
-    };
-    response.status = 200;
-  } else if (username) {
-    response.status = 404;
-  } else {
-    response.status = 400;
-  }
-
-  return response;
+  next();
 }
 
-function getOrCreateUser(url, request) {
-  const username = request.body && request.body.username;
-  const response = {};
-
-  if (database.users[username]) {
-    response.body = {user: database.users[username]};
-    response.status = 200;
-  } else if (username) {
-    const user = {
-      username: username,
-      articleIds: [],
-      commentIds: []
-    };
-    database.users[username] = user;
-
-    response.body = {user: user};
-    response.status = 201;
-  } else {
-    response.status = 400;
-  }
-
-  return response;
-}
-
-function getArticles(url, request) {
-  const response = {};
-
-  response.status = 200;
-  response.body = {
-    articles: Object.keys(database.articles)
-        .map(articleId => database.articles[articleId])
-        .filter(article => article)
-        .sort((article1, article2) => article2.id - article1.id)
-  };
-
-  return response;
-}
-
-function getArticle(url, request) {
-  const id = Number(url.split('/').filter(segment => segment)[1]);
-  const article = database.articles[id];
-  const response = {};
-
-  if (article) {
-    article.comments = article.commentIds.map(
-      commentId => database.comments[commentId]);
-
-    response.body = {article: article};
-    response.status = 200;
-  } else if (id) {
-    response.status = 404;
-  } else {
-    response.status = 400;
-  }
-
-  return response;
-}
-
-
-
-function createArticle(url, request) {
-  const requestArticle = request.body && request.body.article;
-  const response = {};
-
-  if (requestArticle && requestArticle.title && requestArticle.url &&
-      requestArticle.username && database.users[requestArticle.username]) {
-    const article = {
-      id: database.nextArticleId++,
-      title: requestArticle.title,
-      url: requestArticle.url,
-      username: requestArticle.username,
-      commentIds: [],
-      upvotedBy: [],
-      downvotedBy: []
-    };
-
-    database.articles[article.id] = article;
-    database.users[article.username].articleIds.push(article.id);
-
-    response.body = {article: article};
-    response.status = 201;
-  } else {
-    response.status = 400;
-  }
-
-  return response;
-}
-
-function createComment (url,request) {
-  const requestComment = request.body && request.body.comment;
-  const response = {};
-    if (requestComment && requestComment.body &&
-      requestComment.articleId && database.articles[requestComment.articleId] &&
-      requestComment.username && database.users[requestComment.username]){
-    const comment = {
-      id: database.nextCommentId++,
-      body: requestComment.body,
-      username: requestComment.username,
-      articleId: requestComment.articleId,
-      upvotedBy: [],
-      downvotedBy: []
-    };
-    database.comments[comment.id] = comment;
-    database.users[comment.username].commentIds.unshift(comment.id);
-    database.articles[comment.articleId].commentIds.unshift(comment.id);
-    response.body = {comment: comment};
-    response.status = 201;
-  }    else {
-      response.status = 400
-    }
-  return response;
-}
-
-
-
-
-function updateComment(url, request) {
-    const id = Number(url.split('/').filter(segment => segment)[1]);
-    const savedComment = database.comments[id];
-    const requestComment = request.body && request.body.comment;
-    const response = {};
-    if (!requestComment) {
-        response.status = 400;
-    } else if (!savedComment) {
-        response.status = 404;
-    } else {
-        savedComment.body = requestComment.body || savedComment.body;
-        response.status = 200;
-    }
-    return response;
-}
-
-
-
-function updateArticle(url, request) {
-  const id = Number(url.split('/').filter(segment => segment)[1]);
-  const savedArticle = database.articles[id];
-  const requestArticle = request.body && request.body.article;
-  const response = {};
-
-  if (!id || !requestArticle) {
-    response.status = 400;
-  } else if (!savedArticle) {
-    response.status = 404;
-  } else {
-    savedArticle.title = requestArticle.title || savedArticle.title;
-    savedArticle.url = requestArticle.url || savedArticle.url;
-
-    response.body = {article: savedArticle};
-    response.status = 200;
-  }
-
-  return response;
-}
-
-const pp = x => JSON.stringify (x, null, 2);
-
-
-
-function deleteComment(url, request) {
-    const id = Number(url.split('/').filter(segment => segment)[1]);
-    const savedComment = database.comments[id];
-
-    const response = {};
-
-
-
-    if (savedComment && id) {
-      // deletes comment id from users
-        const un = database.comments[id].username;
-        const index = database.users[un].commentIds.indexOf(id);
-        database.users[un].commentIds.splice(index, 1);
-
-        // deletes comment id from articles
-          const artId = database.comments[id].articleId;
-          const index2 =  database.articles[artId].commentIds.indexOf(id);
-          database.articles[artId].commentIds.splice(index2, 1);
-
-        //deletes the comment
-        database.comments[id]=null;
-
-        response.status = 204;
-    } else {
-          response.status = 404;
-    }
-  return response;
-}
-
-
-
-function deleteArticle(url, request) {
-  const id = Number(url.split('/').filter(segment => segment)[1]);
-  const savedArticle = database.articles[id];
-  const response = {};
-
-  if (savedArticle) {
-    database.articles[id] = null;
-    savedArticle.commentIds.forEach(commentId => {
-      const comment = database.comments[commentId];
-      database.comments[commentId] = null;
-      const userCommentIds = database.users[comment.username].commentIds;
-      userCommentIds.splice(userCommentIds.indexOf(id), 1);
+app.get('/api/employees', (req, res, next) => {
+    db.all('SELECT * FROM Employee WHERE is_current_employee=1', (error, row) =>{
+      res.status(200).send({Employees: rows});
     });
-    const userArticleIds = database.users[savedArticle.username].articleIds;
-    userArticleIds.splice(userArticleIds.indexOf(id), 1);
-    response.status = 204;
-  } else {
-    response.status = 400;
-  }
+  });
 
-  return response;
-}
-
-function upvoteArticle(url, request) {
-  const id = Number(url.split('/').filter(segment => segment)[1]);
-  const username = request.body && request.body.username;
-  let savedArticle = database.articles[id];
-  const response = {};
-
-  if (savedArticle && database.users[username]) {
-    savedArticle = upvote(savedArticle, username);
-
-    response.body = {article: savedArticle};
-    response.status = 200;
-  } else {
-    response.status = 400;
-  }
-
-  return response;
-}
-
-
-
-function upvoteComment(url, request){
-  const id = Number(url.split('/').filter(segment => segment)[1]);
-  const un = request.body && request.body.username;
-  const savedComment= database.comments[id];
-  const response = {};
-  if (!savedComment || !request.body || !database.users[un]){
-    response.status = 400;
-  }
-  else{
-    upvote(savedComment, un);
-    response.body = {comment: savedComment};
-      response.status = 200;
-  }
-return response;
-
-};
-
-function downvoteComment(url, request){
-  const id = Number(url.split('/').filter(segment => segment)[1]);
-  const un =  request.body && request.body.username;
-  let savedComment= database.comments[id];
-    const response = {};
-  if (!savedComment || !database.users[un] || !request.body){
-      response.status = 400;
-  }
-  else{
-    downvote(savedComment, un);
-      response.body = {comment: savedComment};
-        response.status = 200;
-  }
-return response;
-};
-
-function downvoteArticle(url, request) {
-  const id = Number(url.split('/').filter(segment => segment)[1]);
-  const username = request.body && request.body.username;
-  let savedArticle = database.articles[id];
-  const response = {};
-
-  if (savedArticle && database.users[username]) {
-    savedArticle = downvote(savedArticle, username);
-    response.body = {article: savedArticle};
-    response.status = 200;
-  } else {
-    response.status = 400;
-  }
-  return response;
-}
-
-function upvote(item, username) {
-  if (item.downvotedBy.includes(username)) {
-    item.downvotedBy.splice(item.downvotedBy.indexOf(username), 1);
-  }
-  if (!item.upvotedBy.includes(username)) {
-    item.upvotedBy.push(username);
-  }
-  return item;
-}
-
-function downvote(item, username) {
-  if (item.upvotedBy.includes(username)) {
-    item.upvotedBy.splice(item.upvotedBy.indexOf(username), 1);
-  }
-  if (!item.downvotedBy.includes(username)) {
-    item.downvotedBy.push(username);
-  }
-  return item;
-}
-
-// Write all code above this line.
-
-const http = require('http');
-const url = require('url');
-
-const port = process.env.PORT || 4000;
-const isTestMode = process.env.IS_TEST_MODE;
-
-const requestHandler = (request, response) => {
-  const url = request.url;
-  const method = request.method;
-  const route = getRequestRoute(url);
-
-  if (method === 'OPTIONS') {
-    var headers = {};
-    headers["Access-Control-Allow-Origin"] = "*";
-    headers["Access-Control-Allow-Methods"] = "POST, GET, PUT, DELETE, OPTIONS";
-    headers["Access-Control-Allow-Credentials"] = false;
-    headers["Access-Control-Max-Age"] = '86400'; // 24 hours
-    headers["Access-Control-Allow-Headers"] = "X-Requested-With, X-HTTP-Method-Override, Content-Type, Accept";
-    response.writeHead(200, headers);
-    return response.end();
-  }
-
-  response.setHeader('Access-Control-Allow-Origin', '*');
-  response.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  response.setHeader(
-      'Access-Control-Allow-Headers', 'X-Requested-With,content-type');
-
-  if (!routes[route] || !routes[route][method]) {
-    response.statusCode = 400;
-    return response.end();
-  }
-
-  if (method === 'GET' || method === 'DELETE') {
-    const methodResponse = routes[route][method].call(null, url);
-    !isTestMode && (typeof saveDatabase === 'function') && saveDatabase();
-
-    response.statusCode = methodResponse.status;
-    response.end(JSON.stringify(methodResponse.body) || '');
-  } else {
-    let body = [];
-    request.on('data', (chunk) => {
-      body.push(chunk);
-    }).on('end', () => {
-      body = JSON.parse(Buffer.concat(body).toString());
-      const jsonRequest = {body: body};
-      const methodResponse = routes[route][method].call(null, url, jsonRequest);
-      !isTestMode && (typeof saveDatabase === 'function') && saveDatabase();
-
-      response.statusCode = methodResponse.status;
-      response.end(JSON.stringify(methodResponse.body) || '');
+app.post('/api/employees',validateEmployee, (req, res, next) =>{
+    db.run(`INSERT INTO Employee (name, position, wage, is_current_employee)
+            VALUES($name,$position,$wage,$is_current_employee)`,{
+              $name: req.body.employee.name,
+              $position: req.body.employee.position,
+              $wage: req.body.employee.wage,
+              $is_current_employee: 1
+            }, (error, row) => {
+                  res.sendStatus(200).send({Employee: row});
+      });
     });
-  }
-};
 
-const getRequestRoute = (url) => {
-  const pathSegments = url.split('/').filter(segment => segment);
 
-  if (pathSegments.length === 1) {
-    return `/${pathSegments[0]}`;
-  } else if (pathSegments[2] === 'upvote' || pathSegments[2] === 'downvote') {
-    return `/${pathSegments[0]}/:id/${pathSegments[2]}`;
-  } else if (pathSegments[0] === 'users') {
-    return `/${pathSegments[0]}/:username`;
-  } else {
-    return `/${pathSegments[0]}/:id`;
-  }
-}
-
-if (typeof loadDatabase === 'function' && !isTestMode) {
-  const savedDatabase = loadDatabase();
-  if (savedDatabase) {
-    for (key in database) {
-      database[key] = savedDatabase[key] || database[key];
+app.get('/api/employees/:employeeId', (req, res, next) =>{
+    db.get ('SELECT * FROM Employee WHERE id=req.params.employeeId'),
+    (error, row) => {
+      if (error){
+        res.sendStatus(400);
+      }
+      else {
+          res.sendStatus(200).send({Employee: row});
+      }
     }
-  }
-}
 
-const server = http.createServer(requestHandler);
+  });
 
-server.listen(port, (err) => {
-  if (err) {
-    return console.log('Server did not start succesfully: ', err);
-  }
+app.post ('/api/employees/:employeeId', (req, res, next) =>
+    db.run (`UPDATE Employee SET name=$name, position=$position, wage=$wage
+     WHERE id=req.params.employeeId`),{
+       $name:req.body.name,
+       $wage: req.body.wage,
+       $position: req.body.position
+     });
 
-  console.log(`Server is listening on ${port}`);
+////this is clearly wrong , need to chage is employed to 0 instead of axing row
+app.delete('/api/employees/:employeeId', (req, res, next) => {
+      db.run('DELETE FROM Employee WHERE id=req.params.employeeId')
+    });
+
+app.get('/api/employees/:employeeId/timesheets', (req, res, next) =>{
+        db.all('SELECT * FROM Timesheet WHERE employee_id=req.params.employeeId')
+      });
+
+app.post ('/api/employees/:employeeId/timesheets', (req, res, next) =>{
+      db.run (`INSERT INTO TimeSheet (hours, rate, date) VALUES (
+        $hours, $rate, $date)`),
+        {
+          $hours: req.body.hours,
+          $rate: req.body.rate,
+          $date: req.body.date
+        }
+  });
+
+app.post ('/api/employees/:employeeId/timesheets/:timesheetId',  (req, res, next) =>{
+      db.run(`UPDATE timesheet SET hours=$hours, rate=$rate, $date=date
+      WHERE id=req.params.timesheetId`),
+      {
+        $hours: req.body.hours,
+        $rate: req.body.rate,
+        $date: req.body.date
+      }
 });
+
+
+app.delete ('/api/employees/:employeeId/timesheets/:timesheetId',  (req, res, next) =>{
+      db.run('DELETE FROM timesheet WHERE id=req.params.timesheetId')
+});
+
+app.get('/api/menus/:menuId',(req, res, next) =>{
+    db.get('SELECT * FROM menu WHERE id=req.params.menuId')
+});
+
+app.post('/api/menus/:menuId',(req, res, next) =>{
+    db.run('UPDATE menu SET title=$title WHERE id=req.params.menuId'),
+    {
+      $title: req.body.title
+    }
+});
+
+
+//only when it has no menu item-----hmmm
+app.post('/api/menus/:menuId',(req, res, next) =>{
+    db.run('DELETE FROM menu WHERE id=req.params.id')
+  });
+
+
+app.get('/api/menus/:menuId/menu-items', (req, res, next) =>{
+   db.all('SELECT * FROM menu item WHERE menu_id=menuId')
+ });
+
+ app.post('/api/menus/:menuId/menu-items', (req, res, next) =>{
+   db.run(`INSERT INTO MenuItem (description, inventory, price)
+   VALUES ($description, $inventory, $price)`),{
+     $description: req.body.MenuItem.description,
+     $inventory: req.body.MenuItem.inventory,
+     $price:req.body.MenuItem.inventory
+   }
+ });
+
+ app.post('/api/menus/:menuId/menu-items/:menuItemId',(req, res, next) =>{
+   db.run(`UPDATE MenuItem SET description=$description, $inventory=inventory,
+     price=$price WHERE id=menuItemId)`),{
+       $description: req.body.MenuItem.description,
+       $inventory: req.body.MenuItem.inventory,
+       $price:req.body.MenuItem.inventory
+     }
+ });
+
+ app.delete('/api/menus/:menuId/menu-items/:menuItemId',(req, res, next) =>{
+   db.run('DELETE FROM MenuItem WHERE id=req.params.menuItemId')
+ });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+module.exports =app;
+app.listen(PORT, () => {console.log('listening yay');})
