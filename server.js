@@ -22,7 +22,7 @@ app.use(bodyParser.json());
 }
 
 app.get('/api/employees', (req, res, next) => {
-    db.all('SELECT * FROM Employee WHERE is_current_employee=1', (error, row) =>{
+    db.all('SELECT * FROM Employee WHERE is_current_employee=1', (error, rows) =>{
       res.status(200).send({Employees: rows});
     });
   });
@@ -52,14 +52,15 @@ app.get('/api/employees/:employeeId', (req, res, next) =>{
     }
 
   });
-
+/*
 app.post ('/api/employees/:employeeId', (req, res, next) =>
     db.run (`UPDATE Employee SET name=$name, position=$position, wage=$wage
      WHERE id=req.params.employeeId`),{
-       $name:req.body.name,
-       $wage: req.body.wage,
-       $position: req.body.position
+       $name: req.body.employee.name,
+       $wage: req.body.employee.wage,
+       $position: req.body.employee.position
      });
+*/
 
 ////this is clearly wrong , need to chage is employed to 0 instead of axing row
 app.delete('/api/employees/:employeeId', (req, res, next) => {
@@ -138,40 +139,6 @@ app.get('/api/menus/:menuId/menu-items', (req, res, next) =>{
  app.delete('/api/menus/:menuId/menu-items/:menuItemId',(req, res, next) =>{
    db.run('DELETE FROM MenuItem WHERE id=req.params.menuItemId')
  });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 module.exports =app;
 app.listen(PORT, () => {console.log('listening yay');})

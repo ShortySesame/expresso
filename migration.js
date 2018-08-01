@@ -20,6 +20,7 @@ db.serialize(() => {
            hours INTEGER NOT NULL,
            rate INTEGER NOT NULL,
            date INTEGER NOT NULL,
+           employee_id INTEGER NOT NULL,
            FOREIGN KEY (employee_id) REFERENCES Employee(id)
         );`
     );
@@ -41,6 +42,7 @@ db.serialize(() => {
            description TEXT,
            inventory INTEGER NOT NULL,
            price INTEGER NOT NULL,
+           menu_id INTEGER,
            FOREIGN KEY (menu_id) REFERENCES Menu(id)
         );`
     );
