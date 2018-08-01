@@ -13,15 +13,20 @@ app.use(express.static('public'));
 app.use(morgan('dev'));
 app.use(bodyParser.json());
 
- const validateId = (req, res, next) => {
-  const test = db.all(`SELECT Count(*) FROM Employee WHERE id=$id`,
-  {$id: req.params.employeeId}
-  );
-  if (test === 0) {
-    res.status(400).send();
-  }
-  next();
-}
+
+// handle :employeeId parameters
+app.param('/api/employees/:employeeId', (req, res, next, id) => {
+ db.get(`SELECT * FROM Employee WHERE id = $id`, {$id: id}, (err, employee) => {
+   if (err) {
+     next(err);
+   } else if (employee) {
+     next();
+   } else {
+     res.sendStatus(404);
+   }
+ });
+});
+
 
 const validateEmployee = (req, res, next) => {
  const test = req.body.employee;
@@ -34,12 +39,15 @@ const validateEmployee = (req, res, next) => {
 const pp = x => JSON.stringify(x, null, 2);
 //console.log(`>>>>>>>>>>> req.body is ${pp(req.body)}`); useless so far
 
+
+//get
 app.get('/api/employees', (req, res, next) => {
     db.all('SELECT * FROM Employee WHERE is_current_employee=1', (error, rows) =>{
       res.status(200).send({employees: rows});
     });
   });
 
+//post 201
 app.post('/api/employees',validateEmployee, (req, res, next) =>{
     db.run(`INSERT INTO Employee (name, position, wage, is_current_employee)
             VALUES($name,$position,$wage,$is_current_employee)`,{
@@ -49,77 +57,139 @@ app.post('/api/employees',validateEmployee, (req, res, next) =>{
               $is_current_employee: 1
             }, (error, row) => {
               console.log(`>>>>>>>>>>> req.body is ${pp(req.body)}`)
-                  res.sendStatus(200).send({employee: row});
+                  res.sendStatus(201).send({employee: row});
       });
     });
 
-
-app.get('/api/employees/:employeeId', validateId, (req, res, next) =>{
-    db.get ('SELECT * FROM Employee WHERE id=$id'),
+//get
+app.get('/api/employees/:employeeId', validateEmployee, (req, res, next) =>{
+    db.get ('SELECT * FROM Employee WHERE id=$id',
     {$id: req.params.employeeId},
     (error, row) => {
     res.status(200).send({employee: row});
-      }
+  });
     });
 
 
-/*
-app.post ('/api/employees/:employeeId', (req, res, next) =>
+//put
+app.post ('/api/employees/:employeeId', (req, res, next) =>{
     db.run (`UPDATE Employee SET name=$name, position=$position, wage=$wage
-     WHERE id=req.params.employeeId`),{
+     WHERE id=req.params.employeeId`,{
        $name: req.body.employee.name,
        $wage: req.body.employee.wage,
        $position: req.body.employee.position
+     },
+     (error, row) => {
+       res.status(200).send({employee: row});
      });
-*/
+   });
 
-////this is clearly wrong , need to chage is employed to 0 instead of axing row
-app.delete('/api/employees/:employeeId', (req, res, next) => {
-      db.run('DELETE FROM Employee WHERE id=req.params.employeeId')
-    });
-
-app.get('/api/employees/:employeeId/timesheets', (req, res, next) =>{
-        db.all('SELECT * FROM Timesheet WHERE employee_id=req.params.employeeId')
+// delete
+app.post('/api/employees/:employeeId', (req, res, next) => {
+      db.run('UPDATE Employee  SET is_current_employee=0 WHERE id=req.params.id',  (error, row) =>{
+      res.status(200).send({employee: row})
       });
-
-app.post ('/api/employees/:employeeId/timesheets', (req, res, next) =>{
-      db.run (`INSERT INTO TimeSheet (hours, rate, date) VALUES (
-        $hours, $rate, $date)`),
-        {
-          $hours: req.body.hours,
-          $rate: req.body.rate,
-          $date: req.body.date
-        }
   });
 
+//get
+app.get('/api/employees/:employeeId/timesheets', (req, res, next) =>{
+        db.all('SELECT * FROM Timesheet WHERE employee_id=req.params.employeeId',
+        (error, row) =>{
+        res.status(200).send({timesheet: row})
+      });
+  });
+
+//post 201
+app.post ('/api/employees/:employeeId/timesheets', (req, res, next) =>{
+      db.run (`INSERT INTO TimeSheet (hours, rate, date) VALUES (
+        $hours, $rate, $date)`,
+        {
+          $hours: req.body.timesheet.hours,
+          $rate: req.body.timesheet.rate,
+          $date: req.body.timesheet.date
+        },
+        (error, row) =>{
+        res.status(201).send({timesheet: row})
+      });
+    });
+
+// get timesheet id
+app.get('/api/employees/:employeeId/timesheets/:timesheetId',  (req, res, next) =>{
+    db.all(`SELECT * FROM timesheet WHERE employee_id=$id`,
+      {$id: req.params.timsheetId},
+      (error, rows) =>{
+      res.status(200).send({timesheet: rows})
+    });
+});
+
+//put timesheet id
 app.post ('/api/employees/:employeeId/timesheets/:timesheetId',  (req, res, next) =>{
       db.run(`UPDATE timesheet SET hours=$hours, rate=$rate, $date=date
-      WHERE id=req.params.timesheetId`),
+      WHERE id=req.params.timesheetId`,
       {
-        $hours: req.body.hours,
-        $rate: req.body.rate,
-        $date: req.body.date
-      }
+        $hours: req.body.timesheet.hours,
+        $rate: req.body.timesheet.rate,
+        $date: req.body.timesheet.date
+      },
+      (error, row) =>{
+      res.status(200).send({timesheet: row})
+    });
 });
 
-
+//delete timesheet id
+// still need to check for valid timesheet id
 app.delete ('/api/employees/:employeeId/timesheets/:timesheetId',  (req, res, next) =>{
-      db.run('DELETE FROM timesheet WHERE id=req.params.timesheetId')
+      db.run(`DELETE FROM timesheet WHERE id=$id`, {$id: req.params.timesheetId},
+        (error, row) =>{
+        res.status(200).send({timesheet: row})
+      });
 });
 
-app.get('/api/menus/:menuId',(req, res, next) =>{
-    db.get('SELECT * FROM menu WHERE id=req.params.menuId')
+
+//get menu
+app.get('/api/menus/',(req, res, next) =>{
+    db.all(`SELECT * FROM Menu`,
+      (error, rows) =>{
+      res.status(200).send({menu: rows})
+    });
 });
 
-app.post('/api/menus/:menuId',(req, res, next) =>{
-    db.run('UPDATE menu SET title=$title WHERE id=req.params.menuId'),
+//post menu 201
+//still need to check for missing fields
+app.post('/api/menus/',(req, res, next) =>{
+    db.run(`INSERT INTO menu SET title=$title`,
     {
-      $title: req.body.title
-    }
+      $title: req.body.menu.title
+    },
+    (error, row) =>{
+    res.status(201).send({menu: row})
+  });
+});
+
+//get menu id
+app.get('/api/menus/:menuId',(req, res, next) =>{
+    db.all(`SELECT * FROM menu WHERE id=$id`,
+      {$id: req.params.menuId},
+      (error, row) =>{
+      res.status(200).send({menu: row})
+    });
+});
+
+//post menu id 201
+//404 and 400 check not yet attempted
+app.post('/api/menus/:menuId',(req, res, next) =>{
+    db.run(`UPDATE menu SET title=$title WHERE id=$id`,
+    {
+      $title: req.body.menu.title,
+      $id: req.params.menuId
+    },
+    (error, row) =>{
+    res.status(201).send({menu: row})
+  });
 });
 
 
-//only when it has no menu item-----hmmm
+//delete menu id
 app.post('/api/menus/:menuId',(req, res, next) =>{
     db.run('DELETE FROM menu WHERE id=req.params.id')
   });
