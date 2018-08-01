@@ -1,5 +1,5 @@
 const sqlite3 = require('sqlite3');
-const db = new sqlite3.Database(process.env.TEST_DATABASE || './db.sqlite');
+const db = new sqlite3.Database(process.env.TEST_DATABASE || './database.sqlite');
 
 db.serialize(() => {
     db.run(`DROP TABLE IF EXISTS Employee`);
@@ -39,10 +39,11 @@ db.serialize(() => {
     db.run(`DROP TABLE IF EXISTS MenuItem`);
     db.run(`CREATE TABLE IF NOT EXISTS MenuItem(
            id INTEGER PRIMARY KEY NOT NULL,
+           name INTEGER NOT NULL,
            description TEXT,
            inventory INTEGER NOT NULL,
            price INTEGER NOT NULL,
-           menu_id INTEGER,
+           menu_id INTEGER NOT NULL,
            FOREIGN KEY (menu_id) REFERENCES Menu(id)
         );`
     );

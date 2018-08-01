@@ -4,26 +4,39 @@ const bodyParser = require ('body-parser');
 const morgan = require ('morgan');
 
 const sqlite3 = require ('sqlite3');
-new sqlite3.Database(process.env.TEST_DATABASE || './db.sqlite');
+const db = new sqlite3.Database(process.env.TEST_DATABASE || './database.sqlite');
 
 const PORT = process.env.PORT || 4001;
-const db = new sqlite3.Database(process.env.TEST_DATABASE || './db.sqlite');
+
 
 app.use(express.static('public'));
 app.use(morgan('dev'));
 app.use(bodyParser.json());
 
- validateEmployee = (req, res, next) => {
-  const test = req.body.employee;
-  if (!test.name || !test.position || !test.wage) {
+ const validateId = (req, res, next) => {
+  const test = db.all(`SELECT Count(*) FROM Employee WHERE id=$id`,
+  {$id: req.params.employeeId}
+  );
+  if (test === 0) {
     res.status(400).send();
   }
   next();
 }
 
+const validateEmployee = (req, res, next) => {
+ const test = req.body.employee;
+ if (!test.name || !test.position || !test.wage) {
+   res.status(400).send();
+ }
+ next();
+}
+
+const pp = x => JSON.stringify(x, null, 2);
+//console.log(`>>>>>>>>>>> req.body is ${pp(req.body)}`); useless so far
+
 app.get('/api/employees', (req, res, next) => {
     db.all('SELECT * FROM Employee WHERE is_current_employee=1', (error, rows) =>{
-      res.status(200).send({Employees: rows});
+      res.status(200).send({employees: rows});
     });
   });
 
@@ -35,23 +48,21 @@ app.post('/api/employees',validateEmployee, (req, res, next) =>{
               $wage: req.body.employee.wage,
               $is_current_employee: 1
             }, (error, row) => {
-                  res.sendStatus(200).send({Employee: row});
+              console.log(`>>>>>>>>>>> req.body is ${pp(req.body)}`)
+                  res.sendStatus(200).send({employee: row});
       });
     });
 
 
-app.get('/api/employees/:employeeId', (req, res, next) =>{
-    db.get ('SELECT * FROM Employee WHERE id=req.params.employeeId'),
+app.get('/api/employees/:employeeId', validateId, (req, res, next) =>{
+    db.get ('SELECT * FROM Employee WHERE id=$id'),
+    {$id: req.params.employeeId},
     (error, row) => {
-      if (error){
-        res.sendStatus(400);
+    res.status(200).send({employee: row});
       }
-      else {
-          res.sendStatus(200).send({Employee: row});
-      }
-    }
+    });
 
-  });
+
 /*
 app.post ('/api/employees/:employeeId', (req, res, next) =>
     db.run (`UPDATE Employee SET name=$name, position=$position, wage=$wage
