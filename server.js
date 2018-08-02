@@ -29,11 +29,14 @@ app.param('/api/employees/:employeeId', (req, res, next, id) => {
 
 
 const validateEmployee = (req, res, next) => {
- const test = req.body.employee;
- if (!test.name || !test.position || !test.wage) {
-   res.status(400).send();
+ const emp = req.body.employee;
+ if (emp && emp.name && emp.position && emp.wage) {
+   next();
  }
- next();
+ else{
+      res.status(400).send();
+ }
+
 }
 
 const pp = x => JSON.stringify(x, null, 2);
@@ -173,7 +176,7 @@ Returns a 200 response containing the menu with the supplied menu ID on the menu
 If a menu with the supplied menu ID doesn't exist, returns a 404 response
 */
 app.get('/api/menus/:menuId',(req, res, next) =>{
-    db.all(`SELECT * FROM menu WHERE id=$id`,
+    db.all(`SELECT * FROM Menu WHERE id=$id`,
       {$id: req.params.menuId},
       (error, row) =>{
       res.status(200).send({menu: row})
