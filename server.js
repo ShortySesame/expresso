@@ -23,13 +23,16 @@ app.param('/api/employees/:employeeId', (req, res, next, id) => {
             if (error) {
                 next(error);
             } else if (row) {
-                console.log(`>>>>>>>>>>> row is ${pp(row)}`);
+                req.employee = row;
                 next();
             } else {
                 res.status(404).send();
             }
         });
 });
+
+const lastIDget = (table) =>
+  db.get(`SELECT * FROM ${table} WHERE id=${this.lastID}`);
 
 
 const validateEmployee = (req, res, next) => {
@@ -54,32 +57,35 @@ app.get('/api/employees', (req, res, next) => {
     });
 });
 
+//get employee id
+app.get('/api/employees/:employeeId', (req, res, next) => {
+  console.log(`>>>>>>>>>>> req.employee is ${pp(req.employee)}`)
+   res.send({
+       employee: req.employee
+   });
+});
+
 //post employee 201
 app.post('/api/employees', validateEmployee, (req, res, next) => {
-    console.log(`>>>>>>>>>>> req.body is ${pp(req.body)}`)
     db.run(`INSERT INTO Employee (name, position, wage)
             VALUES($name,$position,$wage)`, {
         $name: req.body.employee.name,
         $position: req.body.employee.position,
         $wage: req.body.employee.wage,
-    }, (error, row) => {
-        res.status(201).send({
-            employee: row
-        });
-    });
+    },(error, row) => {
+          if (error){
+            next(error);
+            }
+          else{
+            console.log(`>>>>>>>>>>> this.lastID is ${this.lastID}`);
+        lastIDget('Employee'),
+           (error, row) => {
+        res.status(201).send({employee: row});
+        };
+          }
+  });
 });
 
-//get employee id
-app.get('/api/employees/:employeeId', (req, res, next) => {
-    db.get('SELECT * FROM Employee WHERE id=$id', {
-            $id: req.params.employeeId
-        },
-        (error, row) => {
-            res.status(200).send({
-                employee: row
-            });
-        });
-});
 
 
 //put employee id
@@ -91,9 +97,15 @@ app.put('/api/employees/:employeeId', validateEmployee, (req, res, next) => {
             $position: req.body.employee.position
         },
         (error, row) => {
-            res.status(200).send({
-                employee: row
-            });
+          if (error){
+          next(error);
+          }
+          else{
+            db.get(`SELECT * FROM EMPLOYEE WHERE id = ${this.lastID}`,
+            (error, row) => {
+            res.status(200).send({employee: row  });
+          });
+        }
         });
 });
 
@@ -102,9 +114,8 @@ app.delete('/api/employees/:employeeId', (req, res, next) => {
     db.run('UPDATE Employee  SET is_current_employee=0 WHERE id=$id', {
         $id: req.params.employeeId
     }, (error, row) => {
-        console.log(`>>>>>>>>>>> row is ${pp(row)}`);
         res.status(200).send({
-            employee: row
+            employee: this.lastID
         });
     });
 });
@@ -130,22 +141,26 @@ app.post('/api/employees/:employeeId/timesheets', (req, res, next) => {
             $date: req.body.timesheet.date
         },
         (error, row) => {
-            res.status(201).send({
-                timesheet: row
-            });
+          if (error){
+            next(error);
+          }
+            res.status(201).send({timesheet: row});
         });
 });
 
 // get timesheet id
 app.get('/api/employees/:employeeId/timesheets/:timesheetId', (req, res, next) => {
     db.all(`SELECT * FROM timesheet WHERE employee_id=$id`, {
-            $id: req.params.timsheetId
+            $id: req.params.employeeId
         },
         (error, rows) => {
-            res.status(200).send({
-                timesheet: rows
-            })
-        });
+          if(error){
+            next(error);
+          }
+          else{
+            res.status(200).send({timesheet: rows});
+            }
+      });
 });
 
 //put timesheet id
@@ -276,9 +291,7 @@ app.put('/api/menus/:menuId/menu-items/:menuItemId', (req, res, next) => {
             $id: req.params.menuItemId
         },
         (error, row) => {
-            res.status(200).send({
-                menu: row
-            });
+            res.status(200).send({menu: row});
         });
 });
 //menu item delete 204
