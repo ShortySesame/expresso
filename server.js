@@ -40,14 +40,14 @@ const pp = x => JSON.stringify(x, null, 2);
 //console.log(`>>>>>>>>>>> req.body is ${pp(req.body)}`); useless so far
 
 
-//get
+//get employee
 app.get('/api/employees', (req, res, next) => {
     db.all('SELECT * FROM Employee WHERE is_current_employee=1', (error, rows) =>{
       res.status(200).send({employees: rows});
     });
   });
 
-//post 201
+//post employee 201
 app.post('/api/employees',validateEmployee, (req, res, next) =>{
     db.run(`INSERT INTO Employee (name, position, wage, is_current_employee)
             VALUES($name,$position,$wage,$is_current_employee)`,{
@@ -56,12 +56,11 @@ app.post('/api/employees',validateEmployee, (req, res, next) =>{
               $wage: req.body.employee.wage,
               $is_current_employee: 1
             }, (error, row) => {
-              console.log(`>>>>>>>>>>> req.body is ${pp(req.body)}`)
-                  res.sendStatus(201).send({employee: row});
+                  res.status(201).send({employee: row});
       });
     });
 
-//get
+//get employee id
 app.get('/api/employees/:employeeId', validateEmployee, (req, res, next) =>{
     db.get ('SELECT * FROM Employee WHERE id=$id',
     {$id: req.params.employeeId},
@@ -71,7 +70,7 @@ app.get('/api/employees/:employeeId', validateEmployee, (req, res, next) =>{
     });
 
 
-//put
+//put employee id
 app.post ('/api/employees/:employeeId', (req, res, next) =>{
     db.run (`UPDATE Employee SET name=$name, position=$position, wage=$wage
      WHERE id=req.params.employeeId`,{
@@ -86,7 +85,8 @@ app.post ('/api/employees/:employeeId', (req, res, next) =>{
 
 // delete
 app.post('/api/employees/:employeeId', (req, res, next) => {
-      db.run('UPDATE Employee  SET is_current_employee=0 WHERE id=req.params.id',  (error, row) =>{
+      db.run('UPDATE Employee  SET is_current_employee=0 WHERE id=$id',
+      {$id: req.params.employeeId},  (error, row) =>{
       res.status(200).send({employee: row})
       });
   });
@@ -167,6 +167,11 @@ app.post('/api/menus/',(req, res, next) =>{
 });
 
 //get menu id
+/*
+GET
+Returns a 200 response containing the menu with the supplied menu ID on the menu property of the response body
+If a menu with the supplied menu ID doesn't exist, returns a 404 response
+*/
 app.get('/api/menus/:menuId',(req, res, next) =>{
     db.all(`SELECT * FROM menu WHERE id=$id`,
       {$id: req.params.menuId},
