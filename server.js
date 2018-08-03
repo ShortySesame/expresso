@@ -94,11 +94,6 @@ const validateTimesheet = (req, res, next) => {
   }
 }
 
-
-const pp = x => JSON.stringify(x, null, 2);
-//console.log(`>>>>>>>>>>> req.body is ${pp(req.body)}`); useless so far
-
-
 //get employee
 app.get('/api/employees', (req, res, next) => {
     db.all('SELECT * FROM Employee WHERE is_current_employee=1', (error, rows) => {
@@ -142,6 +137,10 @@ app.post('/api/employees', validateEmployee, (req, res, next) => {
          });
 });
 
+
+const pp = x => JSON.stringify(x, null, 2);
+//console.log(`>>>>>>>>>>> req.body is ${pp(req.body)}`); useless so far
+
 //put employee id
 app.put('/api/employees/:employeeId', validateEmployee, (req, res, next) => {
     db.run(`UPDATE Employee SET name=$name, position=$position, wage=$wage
@@ -156,9 +155,11 @@ app.put('/api/employees/:employeeId', validateEmployee, (req, res, next) => {
           next(error);
           }
           else{
+            console.log(`>>>>>>>>>>> this.lastID is ${pp(this.lastID)}`);
             db.get(`SELECT * FROM Employee WHERE id = $id`,
               {$id: this.lastID},
             (error, row) => {
+                console.log(`>>>>>>>>>>> row is ${pp(row)}`);
             res.status(200).send({Employee: row});
           });
         }
@@ -173,9 +174,11 @@ app.delete('/api/employees/:employeeId', (req, res, next) => {
       if (error)
       next(error);
       else{
+        console.log(`>>>>>>>>>>> this.lastID is ${pp(this.lastID)}`);
         db.get(`SELECT * FROM Employee WHERE id=$id`,
           {$id: this.lastID},
          (error, row) =>{
+           console.log(`>>>>>>>>>>> row is ${pp(row)}`);
         res.status(200).send({employee: row});
       });
       }
@@ -238,11 +241,19 @@ app.put('/api/employees/:employeeId/timesheets/:timesheetId', validateTimesheet,
             $date: req.body.timesheet.date,
             $id: req.params.timesheetId
         },
-        (error, row) => {
+        function(error){
+          if (error){
+            next(error);
+          }
+          else{
+            de.get(`SELECT * FROM Timesheet WHERE id=$id`,
+              {$id: this.lastID},
+              (error, row) => {
             res.status(200).send({timesheet: row});
-        });
+            });
+          }
+      });
 });
-
 //delete timesheet id
 app.delete('/api/employees/:employeeId/timesheets/:timesheetId', (req, res, next) => {
     db.run(`DELETE FROM Timesheet WHERE id=$id`, {
