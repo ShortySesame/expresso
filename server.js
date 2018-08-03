@@ -23,7 +23,6 @@ app.param('employeeId', (req, res, next, id) => {
             if (error) {
                 next(error);
             } else if (row) {
-
                 next();
             } else {
                 res.status(404).send();
@@ -31,9 +30,50 @@ app.param('employeeId', (req, res, next, id) => {
         });
 });
 
-const lastIDget = (database, lastID) =>
-  db.get(`SELECT * FROM ${database} WHERE id=$id`, {$id: lastID});
+app.param('timesheetId', (req, res, next, id) => {
+    db.get(`SELECT * FROM Timesheet WHERE id = $id`, {
+            $id: id
+        },
+        (error, row) => {
+            if (error) {
+                next(error);
+            } else if (row) {
+                next();
+            } else {
+                res.status(404).send();
+            }
+        });
+});
 
+app.param('menuId', (req, res, next, id) => {
+    db.get(`SELECT * FROM Menu WHERE id = $id`, {
+            $id: id
+        },
+        (error, row) => {
+            if (error) {
+                next(error);
+            } else if (row) {
+                next();
+            } else {
+                res.status(404).send();
+            }
+        });
+});
+
+app.param('menuItemId', (req, res, next, id) => {
+    db.get(`SELECT * FROM MenuItem WHERE id = $id`, {
+            $id: id
+        },
+        (error, row) => {
+            if (error) {
+                next(error);
+            } else if (row) {
+                next();
+            } else {
+                res.status(404).send();
+            }
+        });
+});
 
 const validateEmployee = (req, res, next) => {
     const emp = req.body.employee;
@@ -43,6 +83,17 @@ const validateEmployee = (req, res, next) => {
         res.status(400).send();
     }
 }
+
+const validateTimesheet = (req, res, next) => {
+  const time=req.body.timesheet;
+  if (time.hours && time.rate && time.date){
+    next();
+  }
+  else{
+    res.status(400).send();
+  }
+}
+
 
 const pp = x => JSON.stringify(x, null, 2);
 //console.log(`>>>>>>>>>>> req.body is ${pp(req.body)}`); useless so far
@@ -57,15 +108,7 @@ app.get('/api/employees', (req, res, next) => {
     });
 });
 
-/*get employee id
-app.get('/api/employees/:employeeId', (req, res, next) => {
-  console.log(`>>>>>>>>>>> req.employee is ${pp(req.employee)}`)
-   res.send({
-       employee: req.employee
-   });
-});
-*/
-
+//get employee id
 app.get('/api/employees/:employeeId', (req, res, next) => {
     db.get(`SELECT * FROM Employee WHERE id = $id`, {
           $id: req.params.employeeId
@@ -73,73 +116,65 @@ app.get('/api/employees/:employeeId', (req, res, next) => {
         (error, row) => {
             if (error) {
                 next(error);
-            } else if (row) {
+            } else  {
                 res.status(200).send({ employee: row });
-            } else {
-                res.status(404).send();
             }
         });
 });
 
-
-
 //post employee 201
-//    Creates a new employee with the information from the employee property of the request body and saves
-  //   it to the database. Returns a 201 response with the newly-created employee
-//on the employee property of the response bodyIf any required fields are missing, returns a 400 response
-
 app.post('/api/employees', validateEmployee, (req, res, next) => {
-    db.run(`INSERT INTO Employee (name, position, wage)
-            VALUES($name,$position,$wage)`, {
-        $name: req.body.employee.name,
-        $position: req.body.employee.position,
-        $wage: req.body.employee.wage,
-    },(error, row) => {
-          if (error){
-            next(error);
-            }
-          else{
-            console.log(`>>>>>>>>>>> this.lastID is ${this.lastID}`);
-        lastIDget('Employee', this.lastID),
-           (error, row) => {
-        res.status(201).send({employee: row});
-        };
-          }
-  });
+   db.run(`INSERT INTO Employee (name, position, wage)
+           VALUES ($name, $position, $wage)`, {
+             $name: req.body.employee.name,
+             $position: req.body.employee.position,
+             $wage: req.body.employee.wage,
+         }, function(error) {
+               if (error) {
+                   next(error);
+               } else {
+                   db.get(`SELECT * FROM Employee WHERE id=$id`,
+                          {$id: this.lastID},
+                          (error, row) => {
+                              res.status(201).send({employee: row});
+                          });
+               }
+         });
 });
-
-
 
 //put employee id
 app.put('/api/employees/:employeeId', validateEmployee, (req, res, next) => {
-    db.run(`UPDATE Employee SET name=$name, position=$position, wage=$wage,
-     WHERE id=req.params.employeeId`, {
+    db.run(`UPDATE Employee SET name=$name, position=$position, wage=$wage
+     WHERE id=$id`, {
             $name: req.body.employee.name,
+            $position: req.body.employee.position,
             $wage: req.body.employee.wage,
-            $position: req.body.employee.position
+            $id: req.params.employeeId
         },
-        (error, row) => {
+        function(error){
           if (error){
           next(error);
           }
           else{
-            db.get(`SELECT * FROM EMPLOYEE WHERE id = ${this.lastID}`,
+            db.get(`SELECT * FROM Employee WHERE id = $id`,
+              {$id: this.lastID},
             (error, row) => {
-            res.status(200).send({employee: row});
+            res.status(200).send({Employee: row});
           });
         }
-        });
+    });
 });
 
 // delete
 app.delete('/api/employees/:employeeId', (req, res, next) => {
     db.run('UPDATE Employee  SET is_current_employee=0 WHERE id=$id', {
         $id: req.params.employeeId
-    }, (error, row) => {
+    }, function(error){
       if (error)
       next(error);
       else{
-        db.get(`SELECT * FROM Employee WHERE id=${this.lastID}`,
+        db.get(`SELECT * FROM Employee WHERE id=$id`,
+          {$id: this.lastID},
          (error, row) =>{
         res.status(200).send({employee: row});
       });
@@ -152,36 +187,33 @@ app.get('/api/employees/:employeeId/timesheets', (req, res, next) => {
     db.all(`SELECT * FROM Timesheet WHERE employee_id=$id`, {
             $id: req.params.employeeId
         },
-        (error, row) => {
-            res.status(200).send({
-                timesheet: row
-            });
+        (error, rows) => {
+            res.status(200).send({timesheet: rows});
         });
 });
 
 //post 201
-app.post('/api/employees/:employeeId/timesheets', (req, res, next) => {
-   console.log(`>>>>>>>>>>> req.body.timesheet is ${req.body.timesheet}`);
+app.post('/api/employees/:employeeId/timesheets', (req, res, next) => {;
     db.run(`INSERT INTO Timesheet (hours, rate, date) VALUES (
         $hours, $rate, $date)`, {
             $hours: req.body.timesheet.hours,
             $rate: req.body.timesheet.rate,
             $date: req.body.timesheet.date
-        }
-          ,
-        (error, row) => {
+        },
+          function(error) {
           if (error){
             next(error);
           }
           else{
-
-            db.get(`SELECT * FROM Timesheet WHERE id=${this.lastID}`,
+            db.get(`SELECT * FROM Timesheet WHERE id=$id`,
+              {$id: this.lastID},
             (error, row) => {
             res.status(201).send({timesheet: row});
         });
       }
     });
 });
+
 // get timesheet id
 app.get('/api/employees/:employeeId/timesheets/:timesheetId', (req, res, next) => {
     db.all(`SELECT * FROM Timesheet WHERE employee_id=$id`, {
@@ -198,7 +230,7 @@ app.get('/api/employees/:employeeId/timesheets/:timesheetId', (req, res, next) =
 });
 
 //put timesheet id
-app.put('/api/employees/:employeeId/timesheets/:timesheetId', (req, res, next) => {
+app.put('/api/employees/:employeeId/timesheets/:timesheetId', validateTimesheet, (req, res, next) => {
     db.run(`UPDATE timesheet SET hours=$hours, rate=$rate, date=$date
       WHERE id=$id`, {
             $hours: req.body.timesheet.hours,
@@ -207,22 +239,17 @@ app.put('/api/employees/:employeeId/timesheets/:timesheetId', (req, res, next) =
             $id: req.params.timesheetId
         },
         (error, row) => {
-            res.status(200).send({
-                timesheet: row
-            });
+            res.status(200).send({timesheet: row});
         });
 });
 
 //delete timesheet id
-// still need to check for valid timesheet id
 app.delete('/api/employees/:employeeId/timesheets/:timesheetId', (req, res, next) => {
-    db.run(`DELETE FROM timesheet WHERE id=$id`, {
+    db.run(`DELETE FROM Timesheet WHERE id=$id`, {
             $id: req.params.timesheetId
         },
         (error, row) => {
-            res.status(200).send({
-                timesheet: row
-            });
+            res.status(204).send();
         });
 });
 
@@ -231,9 +258,12 @@ app.delete('/api/employees/:employeeId/timesheets/:timesheetId', (req, res, next
 app.get('/api/menus/', (req, res, next) => {
     db.all(`SELECT * FROM Menu`,
         (error, rows) => {
-            res.status(200).send({
-                menu: rows
-            });
+          if (error){
+            next(error);
+          }
+          else{
+            res.status(200).send({menu: rows});
+          }
         });
 });
 
@@ -329,8 +359,11 @@ app.put('/api/menus/:menuId/menu-items/:menuItemId', (req, res, next) => {
             res.status(200).send({menu: row});
         });
 });
-//menu item delete 204
+
+/*menu item delete 204
 app.delete('/api/menus/:menuId/menu-items/:menuItemId', (req, res, next) => {
+db.serialize(() =>{
+  returnRow = (db.get(`SELECT * `))
     db.run(`DELETE FROM MenuItem WHERE id=$id`, {
             $id: req.params.menuItemId
         },
@@ -340,6 +373,8 @@ app.delete('/api/menus/:menuId/menu-items/:menuItemId', (req, res, next) => {
             });
         });
 });
+});
+*/
 
 module.exports = app;
 app.listen(PORT, () => {
