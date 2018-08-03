@@ -108,6 +108,18 @@ const validateMenu = (req, res, next) => {
   }
 }
 
+const validateMenuItems = (req, res, next) => {
+  item=req.body.MenuItem;
+  if(item.name && item.description && item.price
+  && item.menu_id){
+    next();
+  }
+  else{
+    res.status(400).send();
+  }
+}
+
+
 //get employee
 app.get('/api/employees', (req, res, next) => {
     db.all('SELECT * FROM Employee WHERE is_current_employee=1', (error, rows) => {
@@ -332,46 +344,53 @@ app.post('/api/menus/:menuId', (req, res, next) => {
 
 
 //delete menu id
+//If the menu with the supplied menu ID has related menu items, returns a 400 response.
 app.post('/api/menus/:menuId', (req, res, next) => {
-    db.run(`DELETE FROM menu WHERE id=$id`, {
-            id: req.params.id
-        },
-        (error, row) => {
-            res.status(200).send({
-                menu: row
-            });
-        });
+  db.get(`SELECT * FROM MenuItem WHERE menu_id=$id`,
+        {$id: req.params.menuId},
+      (error, row) => {
+        if (!row) {
+            db.run(`DELETE FROM Menu WHERE id=$id`,
+            {id: req.params.menuId},
+            (error, row) => {
+            res.status(204).send();
+          });
+        }
+        else{
+              res.status(400).send();
+        }
+      });
 });
 
 //get menu items
 app.get('/api/menus/:menuId/menu-items', (req, res, next) => {
-    db.all(`SELECT * FROM menu item WHERE menu_id=$id`, {
+    db.all(`SELECT * FROM MenuItem WHERE menu_id=$id`, {
             $id: req.params.menuId
         },
         (error, rows) => {
-            res.status(200).send({
-                menu: rows
-            });
+            res.status(200).send({menuitems: rows});
         });
 });
 
 //post 201 menu items
-app.post('/api/menus/:menuId/menu-items', (req, res, next) => {
+app.post('/api/menus/:menuId/menu-items', validateMenuItems, (req, res, next) => {
     db.run(`INSERT INTO MenuItem (description, inventory, price)
    VALUES ($description, $inventory, $price)`, {
             $description: req.body.MenuItem.description,
             $inventory: req.body.MenuItem.inventory,
             $price: req.body.MenuItem.inventory
         },
-        (error, row) => {
-            res.status(201).send({
-                menu: row
-            });
+        function(error) {
+          db.get(`SELECT * FROM MenuItem WHERE id=$id`,
+          {$id: this.lastID},
+          (error, row) => {
+            res.status(201).send({menu: row});
         });
+    });
 });
 
 //menu item id put
-app.put('/api/menus/:menuId/menu-items/:menuItemId', (req, res, next) => {
+app.put('/api/menus/:menuId/menu-items/:menuItemId',validateMenuItems, (req, res, next) => {
     db.run(`UPDATE MenuItem SET description=$description, $inventory=inventory,
      price=$price WHERE id=$id`, {
             $description: req.body.MenuItem.description,
@@ -379,26 +398,34 @@ app.put('/api/menus/:menuId/menu-items/:menuItemId', (req, res, next) => {
             $price: req.body.MenuItem.inventory,
             $id: req.params.menuItemId
         },
-        (error, row) => {
-            res.status(200).send({menu: row});
-        });
+        function(error) {
+          if (error){
+            next(error);
+          }
+          else{
+          db.get(`SELECT * FROM MenuItem WHERE id=$id`,
+            {$id: req.MenuId.id},
+            (error, row) => {
+            res.status(200).send({menuitem: row});
+          });
+        }
+      });
 });
 
-/*menu item delete 204
-app.delete('/api/menus/:menuId/menu-items/:menuItemId', (req, res, next) => {
-db.serialize(() =>{
-  returnRow = (db.get(`SELECT * `))
-    db.run(`DELETE FROM MenuItem WHERE id=$id`, {
-            $id: req.params.menuItemId
-        },
+//menu item delete 204
+app.delete('/api/menus/:menuId/menu-items/:menuItemId', (req, res, next) =>{
+    db.run(`DELETE FROM MenuItem WHERE id=$id`,
+            {$id: req.params.menuItemId},
         (error, row) => {
-            res.status(204).send({
-                menu: row
-            });
-        });
+          if (error) {
+            next(error);
+          }
+          else{
+            res.status(204).send();
+          }
+    });
 });
-});
-*/
+
 
 module.exports = app;
 app.listen(PORT, () => {
