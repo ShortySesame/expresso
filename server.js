@@ -376,12 +376,11 @@ app.delete('/api/menus/:menuId',  (req, res, next) => {
     (error, row) => {
       if (error){
         next(error);
-      }else{
-        const test=row;
       }
-  });
-  if (!test) {res.status(400).send();}
-  else{
+      else if (!row){
+    res.status(400).send();
+      }
+      else{
       db.run(`DELETE FROM Menu WHERE id=$id`,
             {$id: req.params.menuId},
             (error, row) => {
@@ -393,6 +392,7 @@ app.delete('/api/menus/:menuId',  (req, res, next) => {
           }
       });
     }
+  });
 });
 
 //get menu items
