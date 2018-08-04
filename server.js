@@ -71,7 +71,7 @@ app.param('menuItemId', (req, res, next, id) => {
             if (error) {
                 next(error);
             } else if (row) {
-              req.menu=row;
+              req.menuItem=row;
                 next();
             } else {
                 res.status(404).send();
@@ -393,7 +393,7 @@ app.get('/api/menus/:menuId/menu-items', (req, res, next) => {
 });
 
 const pp = x => JSON.stringify(x, null, 2);
-//console.log(`>>>>>>>>>>> request.body is ${pp(request.body)}`);
+//console.log(`>>>>>>>>>>> req.body is ${pp(req.body)}`);
 
 //post 201 menu items
 app.post('/api/menus/:menuId/menu-items', validateMenuItems, (req, res, next) => {
@@ -410,7 +410,7 @@ app.post('/api/menus/:menuId/menu-items', validateMenuItems, (req, res, next) =>
           db.get(`SELECT * FROM MenuItem WHERE id=$id`,
           {$id: this.lastID},
           (error, row) => {
-            console.log(`>>>>>>>>>>> request.body is ${pp(request.body)}`);
+            console.log(`>>>>>>>>>>> req.body is ${pp(req.body)}`);
             res.status(201).send({menu: row});
         });
     });
