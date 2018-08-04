@@ -108,6 +108,22 @@ const validateMenu = (req, res, next) => {
   }
 }
 
+const validateMenuItemless = (req, res, next) => {
+  db.get(`SELECT * FROM MenuItem WHERE menu_id=$id`,
+  {$id: req.params.menuId},
+  (error, row) => {
+  if (error){
+    next(error);
+  }
+  else if (row){
+    next();
+  }
+  else{
+  res.status(400).send();
+  }
+  });
+};
+
 const validateMenuItems = (req, res, next) => {
   item=req.body.MenuItem;
   if(item.name && item.description && item.price
@@ -118,6 +134,8 @@ const validateMenuItems = (req, res, next) => {
     res.status(400).send();
   }
 }
+
+
 
 
 //get employee
@@ -290,17 +308,13 @@ app.get('/api/menus/', (req, res, next) => {
           else{
             res.status(200).send({menus: rows});
           }
-        });
+    });
 });
 
 
-
-const pp = x => JSON.stringify(x, null, 2);
-//console.log(`>>>>>>>>>>> req.body is ${pp(req.body)}`); useless so far
-
 //post menu 201
 app.post('/api/menus/', validateMenu, (req, res, next) => {
-    db.run(`INSERT INTO Menu  VALUES (title) SET ($title)`, {
+    db.run(`INSERT INTO Menu (title) VALUES ($title)`, {
             $title: req.body.menu.title
         },
         function(error) {
@@ -308,12 +322,9 @@ app.post('/api/menus/', validateMenu, (req, res, next) => {
             next(error);
           }
           else{
-            console.log(`>>>>>>>>>>> this.lastID is ${pp(this.lastID)}`);
-console.log(`>>>>>>>>>>> req.body is ${pp(req.body)}`)
             db.get(`SELECT * FROM Menu WHERE id=$id`,
             {$id: this.lastID},
                 (error, row) =>{
-                    console.log(`>>>>>>>>>>> row is ${pp(row)}`);
                 res.status(201).send({menu: row});
               });
           }
@@ -332,8 +343,7 @@ app.get('/api/menus/:menuId', (req, res, next) => {
 });
 
 //put menu id 201
-//404 and 400 check not yet attempted
-app.put('/api/menus/:menuId', (req, res, next) => {
+app.put('/api/menus/:menuId',validateMenu, (req, res, next) => {
     db.run(`UPDATE Menu SET title=$title WHERE id=$id`, {
             $title: req.body.menu.title,
             $id: req.params.menuId
@@ -353,22 +363,22 @@ app.put('/api/menus/:menuId', (req, res, next) => {
 });
 
 
-//delete menu id
-//If the menu with the supplied menu ID has related menu items, returns a 400 response.
-app.delete('/api/menus/:menuId', (req, res, next) => {
-  db.get(`SELECT * FROM MenuItem WHERE menu_id=$id`,
-        {$id: req.params.menuId},
-      (error, row) => {
-        if (!row) {
-            db.run(`DELETE FROM Menu WHERE id=$id`,
+/*delete menu id
+    Deletes the menu with the supplied menu ID from the database if that menu has no related menu items. Returns a 204 response.
+    If the menu with the supplied menu ID has related menu items, returns a 400 response.
+    If a menu with the supplied menu ID doesn't exist, returns a 404 response
+    */
+
+app.delete('/api/menus/:menuId', validateMenuItemless, (req, res, next) => {
+      db.run(`DELETE FROM Menu WHERE id=$id`,
             {id: req.params.menuId},
             (error, row) => {
+              if (error){
+                next(error);
+              }
+              else{
             res.status(204).send();
-          });
-        }
-        else{
-              res.status(400).send();
-        }
+          }
       });
 });
 
@@ -378,19 +388,27 @@ app.get('/api/menus/:menuId/menu-items', (req, res, next) => {
             $id: req.params.menuId
         },
         (error, rows) => {
-            res.status(200).send({menuitems: rows});
+            res.status(200).send({menuItems: rows});
         });
 });
 
+const pp = x => JSON.stringify(x, null, 2);
+//console.log(`>>>>>>>>>>> request.body is ${pp(request.body)}`);
+
 //post 201 menu items
 app.post('/api/menus/:menuId/menu-items', validateMenuItems, (req, res, next) => {
-    db.run(`INSERT INTO MenuItem (description, inventory, price)
-   VALUES ($description, $inventory, $price)`, {
+        console.log(`>>>>>>>>>>> request.body is ${pp(request.body)}`);
+      });
+  /*  db.run(`INSERT INTO MenuItem (name, description, inventory, price, menu_id)
+   VALUES ($name, $description, $inventory, $price $menuId)`, {
+            $name: req.body.MenuItem.name,
             $description: req.body.MenuItem.description,
             $inventory: req.body.MenuItem.inventory,
-            $price: req.body.MenuItem.inventory
+            $price: req.body.MenuItem.inventory,
+            $menuId: req.body.MenuItem.menu_Id
         },
         function(error) {
+
           db.get(`SELECT * FROM MenuItem WHERE id=$id`,
           {$id: this.lastID},
           (error, row) => {
@@ -398,14 +416,17 @@ app.post('/api/menus/:menuId/menu-items', validateMenuItems, (req, res, next) =>
         });
     });
 });
+*/
 
 //menu item id put
 app.put('/api/menus/:menuId/menu-items/:menuItemId',validateMenuItems, (req, res, next) => {
-    db.run(`UPDATE MenuItem SET description=$description, $inventory=inventory,
-     price=$price WHERE id=$id`, {
+    db.run(`UPDATE MenuItem SET name=$name, description=$description, $inventory=inventory,
+     price=$price, menu-id=$menuId WHERE id=$id`, {
+            $name: req.body.MenuItem.name,
             $description: req.body.MenuItem.description,
             $inventory: req.body.MenuItem.inventory,
             $price: req.body.MenuItem.inventory,
+            $menuId: req.body.MenuItem.menuId,
             $id: req.params.menuItemId
         },
         function(error) {
@@ -416,7 +437,7 @@ app.put('/api/menus/:menuId/menu-items/:menuItemId',validateMenuItems, (req, res
           db.get(`SELECT * FROM MenuItem WHERE id=$id`,
             {$id: req.MenuId.id},
             (error, row) => {
-            res.status(200).send({menuitem: row});
+            res.status(200).send({menuItem: row});
           });
         }
       });
