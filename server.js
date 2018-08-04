@@ -370,14 +370,14 @@ app.put('/api/menus/:menuId',validateMenu, (req, res, next) => {
     const pp = x => JSON.stringify(x, null, 2);
     //console.log(`>>>>>>>>>>> req.body is ${pp(req.body)}`);
 
-app.delete('/api/menus/:menuId',  (req, res, next) => {
+app.delete('/api/menus/:menuId', (req, res, next) => {
   db.get(`SELECT * FROM MenuItem WHERE menu_id=$id`,
     {$id: req.params.menuId},
     (error, row) => {
       if (error){
         next(error);
       }
-      else if (!row){
+      else if (row){
     res.status(400).send();
       }
       else{
