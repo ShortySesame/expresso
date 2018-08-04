@@ -55,7 +55,7 @@ app.param('menuId', (req, res, next, id) => {
             if (error) {
                 next(error);
             } else if (row) {
-              req.menuId=row;
+              req.menu=row;
                 next();
             } else {
                 res.status(404).send();
@@ -71,7 +71,7 @@ app.param('menuItemId', (req, res, next, id) => {
             if (error) {
                 next(error);
             } else if (row) {
-              req.menuItemId=row;
+              req.menu=row;
                 next();
             } else {
                 res.status(404).send();
@@ -125,7 +125,7 @@ const validateMenuItemless = (req, res, next) => {
 };
 
 const validateMenuItems = (req, res, next) => {
-  item=req.body.MenuItem;
+  const item=req.body.menuItem;
   if(item.name && item.description && item.price
   && item.menu_id){
     next();
@@ -354,7 +354,7 @@ app.put('/api/menus/:menuId',validateMenu, (req, res, next) => {
           }
             else{
               db.get(`SELECT * FROM Menu WHERE id=$id`,
-              {$id: req.menuId.id},
+              {$id: req.menu.id},
               (error, row) => {
                 res.status(200).send({menu: row});
               });
@@ -397,9 +397,7 @@ const pp = x => JSON.stringify(x, null, 2);
 
 //post 201 menu items
 app.post('/api/menus/:menuId/menu-items', validateMenuItems, (req, res, next) => {
-        console.log(`>>>>>>>>>>> request.body is ${pp(request.body)}`);
-      });
-  /*  db.run(`INSERT INTO MenuItem (name, description, inventory, price, menu_id)
+   db.run(`INSERT INTO MenuItem (name, description, inventory, price, menu_id)
    VALUES ($name, $description, $inventory, $price $menuId)`, {
             $name: req.body.MenuItem.name,
             $description: req.body.MenuItem.description,
@@ -412,11 +410,12 @@ app.post('/api/menus/:menuId/menu-items', validateMenuItems, (req, res, next) =>
           db.get(`SELECT * FROM MenuItem WHERE id=$id`,
           {$id: this.lastID},
           (error, row) => {
+            console.log(`>>>>>>>>>>> request.body is ${pp(request.body)}`);
             res.status(201).send({menu: row});
         });
     });
 });
-*/
+
 
 //menu item id put
 app.put('/api/menus/:menuId/menu-items/:menuItemId',validateMenuItems, (req, res, next) => {
