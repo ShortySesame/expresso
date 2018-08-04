@@ -308,10 +308,13 @@ app.post('/api/menus/', validateMenu, (req, res, next) => {
             next(error);
           }
           else{
+            console.log(`>>>>>>>>>>> this.lastID is ${pp(this.lastID)}`);
+console.log(`>>>>>>>>>>> req.body is ${pp(req.body)}`)
             db.get(`SELECT * FROM Menu WHERE id=$id`,
             {$id: this.lastID},
                 (error, row) =>{
-                {res.status(201).send({menu: row});}
+                    console.log(`>>>>>>>>>>> row is ${pp(row)}`);
+                res.status(201).send({menu: row});
               });
           }
     });
