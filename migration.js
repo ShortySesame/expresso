@@ -39,7 +39,7 @@ db.serialize(() => {
     db.run(`DROP TABLE IF EXISTS MenuItem`);
     db.run(`CREATE TABLE IF NOT EXISTS MenuItem(
            id INTEGER PRIMARY KEY NOT NULL,
-           name INTEGER NOT NULL,
+           name TEXT NOT NULL,
            description TEXT,
            inventory INTEGER NOT NULL,
            price INTEGER NOT NULL,
