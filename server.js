@@ -118,24 +118,6 @@ const validateMenuItems = (req, res, next) => {
   }
 }
 
-/*
-const validateMenuItemless = (req, res, next) => {
-  db.get(`SELECT * FROM MenuItem WHERE menu_id=$id`,
-  {$id: req.params.menuId},
-  (error, row) => {
-  if (error){
-    next(error);
-  }
-  else if (row){
-    next();
-  }
-  else{
-  res.status(400).send();
-  }
-  });
-};
-*/
-
 //get employee
 app.get('/api/employees', (req, res, next) => {
     db.all('SELECT * FROM Employee WHERE is_current_employee=1', (error, rows) => {
@@ -203,7 +185,7 @@ app.put('/api/employees/:employeeId', validateEmployee, (req, res, next) => {
     });
 });
 
-// delete
+// delete employee id
 app.delete('/api/employees/:employeeId', (req, res, next) => {
     db.run('UPDATE Employee  SET is_current_employee=0 WHERE id=$id', {
         $id: req.params.employeeId
@@ -361,15 +343,7 @@ app.put('/api/menus/:menuId',validateMenu, (req, res, next) => {
 });
 
 
-/*delete menu id
-    Deletes the menu with the supplied menu ID from the database if that menu has no related menu items. Returns a 204 response.
-    If the menu with the supplied menu ID has related menu items, returns a 400 response.
-    If a menu with the supplied menu ID doesn't exist, returns a 404 response
-    */
-
-    const pp = x => JSON.stringify(x, null, 2);
-    //console.log(`>>>>>>>>>>> req.body is ${pp(req.body)}`);
-
+//delete menu id
 app.delete('/api/menus/:menuId', (req, res, next) => {
   db.get(`SELECT * FROM MenuItem WHERE menu_id=$id`,
     {$id: req.params.menuId},
