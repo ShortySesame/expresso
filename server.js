@@ -6,7 +6,7 @@ const morgan = require('morgan');
 const sqlite3 = require('sqlite3');
 const db = new sqlite3.Database(process.env.TEST_DATABASE || './database.sqlite');
 
-const PORT = process.env.PORT || 4001;
+const PORT = process.env.PORT || 4000;
 
 
 app.use(express.static('public'));
@@ -205,7 +205,7 @@ app.delete('/api/employees/:employeeId', (req, res, next) => {
 
 
 
-//get
+//get timesheets
 app.get('/api/employees/:employeeId/timesheets', (req, res, next) => {
     db.all(`SELECT * FROM Timesheet WHERE employee_id=$id`, {
             $id: req.params.employeeId
@@ -452,5 +452,5 @@ app.delete('/api/menus/:menuId/menu-items/:menuItemId', (req, res, next) =>{
 
 module.exports = app;
 app.listen(PORT, () => {
-    console.log('listening yay');
+    console.log('listening port 4000');
 });
